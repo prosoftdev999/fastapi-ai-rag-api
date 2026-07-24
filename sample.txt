@@ -1,1 +1,1 @@
-Hello RAG
+This is a RAG upload test.
