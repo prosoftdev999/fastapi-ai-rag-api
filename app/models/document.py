@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import enum
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import (
     BigInteger,
@@ -15,6 +18,9 @@ from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.document_chunk import DocumentChunk
 
 
 class DocumentStatus(str, enum.Enum):
@@ -65,9 +71,7 @@ class Document(Base):
         Enum(
             DocumentStatus,
             name="document_status",
-            values_callable=lambda enum_class: [
-                item.value for item in enum_class
-            ],
+            values_callable=lambda enum_class: [item.value for item in enum_class],
         ),
         default=DocumentStatus.PENDING,
         nullable=False,
@@ -92,7 +96,7 @@ class Document(Base):
         nullable=False,
     )
 
-    chunks: Mapped[list["DocumentChunk"]] = relationship(
+    chunks: Mapped[list[DocumentChunk]] = relationship(
         back_populates="document",
         cascade="all, delete-orphan",
         passive_deletes=True,

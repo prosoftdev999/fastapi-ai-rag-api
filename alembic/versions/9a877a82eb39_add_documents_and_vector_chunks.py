@@ -8,8 +8,9 @@ Create Date: 2026-07-23 20:35:41.115572
 from collections.abc import Sequence
 
 import sqlalchemy as sa
-from alembic import op
 from pgvector.sqlalchemy import Vector
+
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "9a877a82eb39"

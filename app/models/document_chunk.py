@@ -1,13 +1,26 @@
+from __future__ import annotations
+
 import uuid
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Integer, Text, UniqueConstraint, func
+from sqlalchemy import (
+    DateTime,
+    ForeignKey,
+    Integer,
+    Text,
+    UniqueConstraint,
+    func,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.config import settings
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.document import Document
 
 
 class DocumentChunk(Base):
@@ -60,6 +73,6 @@ class DocumentChunk(Base):
         nullable=False,
     )
 
-    document: Mapped["Document"] = relationship(
+    document: Mapped[Document] = relationship(
         back_populates="chunks",
     )
