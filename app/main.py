@@ -1,20 +1,20 @@
 from fastapi import FastAPI
 
+from app.api.router import api_router
+from app.core.config import settings
+
 app = FastAPI(
-    title="FastAPI AI RAG API",
-    version="0.1.0",
+    title=settings.app_name,
+    version=settings.app_version,
     description="A production-ready Retrieval-Augmented Generation API.",
 )
+
+app.include_router(api_router, prefix="/api")
 
 
 @app.get("/", tags=["General"])
 async def root() -> dict[str, str]:
     return {
-        "message": "Welcome to FastAPI AI RAG API",
+        "message": f"Welcome to {settings.app_name}",
         "docs": "/docs",
     }
-
-
-@app.get("/health", tags=["Health"])
-async def health_check() -> dict[str, str]:
-    return {"status": "healthy"}
