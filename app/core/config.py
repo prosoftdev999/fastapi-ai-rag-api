@@ -16,9 +16,16 @@ class Settings(BaseSettings):
     openai_api_key: str
     openai_model: str = "gpt-4.1-mini"
 
+    embedding_model: str = "text-embedding-3-small"
+    embedding_dimension: int = 1536
+
+    max_upload_size_mb: int = 10
+    upload_directory: str = "uploads"
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
+        extra="ignore",
     )
 
 
