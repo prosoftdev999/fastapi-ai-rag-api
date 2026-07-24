@@ -1,71 +1,85 @@
-from openai import AsyncOpenAI, OpenAIError
+import asyncio
+from functools import lru_cache
+
+from sentence_transformers import SentenceTransformer
 
 from app.core.config import settings
 
 
 class EmbeddingError(Exception):
-    """Raised when an embedding cannot be generated."""
+    """Raised when local embedding generation fails."""
 
 
-client = AsyncOpenAI(api_key=settings.openai_api_key)
+@lru_cache(maxsize=1)
+def get_embedding_model() -> SentenceTransformer:
+    """Load and cache the local sentence-transformer model."""
+    try:
+        return SentenceTransformer(settings.embedding_model)
+    except Exception as exc:
+        raise EmbeddingError("Could not load the local embedding model") from exc
+
+
+def _encode_texts(texts: list[str]) -> list[list[float]]:
+    """Generate embeddings synchronously using the local model."""
+    if not texts:
+        return []
+
+    try:
+        model = get_embedding_model()
+
+        embeddings = model.encode(
+            texts,
+            normalize_embeddings=True,
+            convert_to_numpy=True,
+            show_progress_bar=False,
+        )
+    except Exception as exc:
+        raise EmbeddingError("Local embedding generation failed") from exc
+
+    results: list[list[float]] = embeddings.tolist()
+
+    if len(results) != len(texts):
+        raise EmbeddingError(
+            "The local model returned an unexpected number of embeddings"
+        )
+
+    for embedding in results:
+        if len(embedding) != settings.embedding_dimension:
+            raise EmbeddingError(
+                "Local embedding dimension does not match configuration"
+            )
+
+    return results
 
 
 async def create_embedding(text: str) -> list[float]:
-    if not text.strip():
+    """Generate one local embedding without blocking the event loop."""
+    cleaned_text = text.strip()
+
+    if not cleaned_text:
         raise EmbeddingError("Cannot create an embedding for empty text")
 
-    try:
-        response = await client.embeddings.create(
-            model=settings.embedding_model,
-            input=text,
-            dimensions=settings.embedding_dimension,
-        )
-    except OpenAIError as exc:
-        raise EmbeddingError("OpenAI embedding request failed") from exc
+    embeddings = await asyncio.to_thread(
+        _encode_texts,
+        [cleaned_text],
+    )
 
-    if not response.data:
-        raise EmbeddingError("OpenAI returned no embedding data")
-
-    embedding = response.data[0].embedding
-
-    if len(embedding) != settings.embedding_dimension:
-        raise EmbeddingError(
-            "Embedding dimension does not match application configuration"
-        )
-
-    return embedding
+    return embeddings[0]
 
 
 async def create_embeddings(
     texts: list[str],
 ) -> list[list[float]]:
+    """Generate local embeddings for multiple text chunks."""
     if not texts:
         return []
 
-    if any(not text.strip() for text in texts):
+    cleaned_texts = [text.strip() for text in texts]
+
+    if any(not text for text in cleaned_texts):
         raise EmbeddingError("Embedding input contains an empty text chunk")
 
-    try:
-        response = await client.embeddings.create(
-            model=settings.embedding_model,
-            input=texts,
-            dimensions=settings.embedding_dimension,
-        )
-    except OpenAIError as exc:
-        raise EmbeddingError("OpenAI embedding batch request failed") from exc
-
-    ordered_data = sorted(
-        response.data,
-        key=lambda item: item.index,
+    return await asyncio.to_thread(
+        _encode_texts,
+        cleaned_texts,
     )
-
-    embeddings = [item.embedding for item in ordered_data]
-
-    if len(embeddings) != len(texts):
-        raise EmbeddingError("OpenAI returned an unexpected number of embeddings")
-
-    for embedding in embeddings:
-        if len(embedding) != settings.embedding_dimension:
-            raise EmbeddingError("Embedding dimension does not match configuration")
-
-    return embeddings
