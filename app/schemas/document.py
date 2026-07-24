@@ -18,3 +18,8 @@ class DocumentResponse(BaseModel):
     error_message: str | None
     created_at: datetime
     updated_at: datetime
+
+
+class DocumentProcessingResponse(BaseModel):
+    document: DocumentResponse
+    chunks_created: int

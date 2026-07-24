@@ -22,6 +22,9 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 10
     upload_directory: str = "uploads"
 
+    chunk_size: int = 1000
+    chunk_overlap: int = 200
+
     model_config = SettingsConfigDict(
         env_file=".env",
         case_sensitive=False,
